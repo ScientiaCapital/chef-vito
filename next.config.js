@@ -6,6 +6,9 @@ const withPWA = require('next-pwa')({
 });
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  // Disable Turbopack for next-pwa compatibility
+  turbopack: false
+};
 
 module.exports = withPWA(nextConfig);
