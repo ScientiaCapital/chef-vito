@@ -28,6 +28,35 @@ export function CameraCapture() {
     setCurrentImage(imageSrc);
   }, [setCurrentImage]);
 
+  const compressImage = async (base64Image: string): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Max width 1920px
+        const MAX_WIDTH = 1920;
+        if (width > MAX_WIDTH) {
+          height = (height * MAX_WIDTH) / width;
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          resolve(blob!);
+        }, 'image/jpeg', 0.8); // 80% quality
+      };
+      img.src = base64Image;
+    });
+  };
+
   const handleUpload = useCallback(async () => {
     if (!preview) return;
 
@@ -35,13 +64,12 @@ export function CameraCapture() {
       setIsAnalyzing(true);
       setError(null);
 
-      // Convert base64 to blob
-      const response = await fetch(preview);
-      const blob = await response.blob();
+      // Compress image before upload
+      const compressedBlob = await compressImage(preview);
 
       // Upload image
       const formData = new FormData();
-      formData.append('image', blob, 'capture.jpg');
+      formData.append('image', compressedBlob, 'capture.jpg');
       formData.append('mode', mode);
 
       const uploadRes = await fetch('/api/upload', {
@@ -68,9 +96,14 @@ export function CameraCapture() {
 
       const result = await analyzeRes.json();
       useAppStore.getState().setAnalysisResult(result);
-    } catch (error) {
-      console.error('Error:', error);
-      setError('Failed to analyze image. Please try again.');
+    } catch (error: any) {
+      console.error('Analysis error:', error);
+      const errorMessage = error.message?.includes('network')
+        ? 'Network error. Please check your connection and try again.'
+        : error.message?.includes('timeout')
+        ? 'Analysis timed out. Please try with a smaller image.'
+        : 'Failed to analyze image. Please try again or use a different photo.';
+      setError(errorMessage);
       setIsAnalyzing(false);
     }
   }, [preview, mode, setIsAnalyzing, setError]);
@@ -103,7 +136,7 @@ export function CameraCapture() {
         </div>
 
         {/* Camera or Preview */}
-        <div className="relative aspect-[4/3] bg-gray-900 rounded-lg overflow-hidden">
+        <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
           {preview ? (
             <img src={preview} alt="Preview" className="w-full h-full object-cover" />
           ) : (
