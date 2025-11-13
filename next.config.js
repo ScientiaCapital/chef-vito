@@ -7,8 +7,8 @@ const withPWA = require('next-pwa')({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Disable Turbopack for next-pwa compatibility
-  turbopack: false
+  // Empty turbopack config to silence Next.js 16 warning while using next-pwa
+  turbopack: {}
 };
 
 module.exports = withPWA(nextConfig);
