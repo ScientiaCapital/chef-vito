@@ -1,11 +1,10 @@
 import OpenAI from 'openai';
 
-const apiKey = process.env.OPENROUTER_API_KEY;
+const apiKey = process.env.OPENROUTER_API_KEY || 'placeholder-key';
 
-if (!apiKey) {
-  throw new Error(
-    'Missing OpenRouter API key. Please ensure OPENROUTER_API_KEY is set in your .env file.'
-  );
+// Only warn during build, will fail at runtime if not set
+if (!process.env.OPENROUTER_API_KEY && process.env.NODE_ENV !== 'production') {
+  console.warn('Warning: Missing OPENROUTER_API_KEY environment variable');
 }
 
 export const openrouter = new OpenAI({
