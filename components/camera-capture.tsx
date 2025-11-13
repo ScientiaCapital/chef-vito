@@ -10,9 +10,9 @@ import { useAppStore } from '@/lib/store';
 import { AnalysisMode } from '@/lib/types';
 
 const MODE_LABELS: Record<AnalysisMode, string> = {
-  dish: 'Analyze Dish',
-  fridge: 'Scan Fridge',
-  recipe: 'Extract Recipe'
+  dish: '🍽️ Analyze Dish',
+  fridge: '🧊 Scan Fridge',
+  recipe: '📖 Extract Recipe'
 };
 
 export function CameraCapture() {
@@ -82,7 +82,7 @@ export function CameraCapture() {
   }, [setCurrentImage]);
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 shadow-xl hover:shadow-2xl transition-all duration-200">
       <div className="space-y-4">
         {/* Mode Selection */}
         <div className="flex gap-2 justify-center">
@@ -95,6 +95,7 @@ export function CameraCapture() {
                 retake();
               }}
               size="sm"
+              className={mode === m ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200' : 'hover:scale-105 transition-all duration-200'}
             >
               {MODE_LABELS[m]}
             </Button>
@@ -126,16 +127,16 @@ export function CameraCapture() {
         <div className="flex gap-2">
           {preview ? (
             <>
-              <Button onClick={retake} variant="outline" className="flex-1">
+              <Button onClick={retake} variant="outline" className="flex-1 hover:scale-105 active:scale-95 transition-all duration-200">
                 Retake
               </Button>
-              <Button onClick={handleUpload} className="flex-1">
+              <Button onClick={handleUpload} className="flex-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200">
                 <Upload className="mr-2 h-4 w-4" />
                 Analyze
               </Button>
             </>
           ) : (
-            <Button onClick={capture} className="w-full" size="lg">
+            <Button onClick={capture} className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200" size="lg">
               <Camera className="mr-2 h-5 w-5" />
               Capture
             </Button>
