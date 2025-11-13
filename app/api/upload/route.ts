@@ -52,9 +52,17 @@ export async function POST(req: NextRequest) {
       });
 
     if (error) {
-      console.error('Upload error:', error);
+      console.error('Supabase upload error:', {
+        message: error.message,
+        name: error.name,
+        statusCode: error.statusCode,
+        error: error
+      });
       return NextResponse.json(
-        { error: 'Failed to upload image' },
+        {
+          error: 'Failed to upload image',
+          details: process.env.NODE_ENV === 'development' ? error.message : 'Storage error'
+        },
         { status: 500 }
       );
     }
