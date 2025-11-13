@@ -14,6 +14,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate mode
+    const validModes = ['dish', 'fridge', 'recipe'];
+    if (!mode || !validModes.includes(mode)) {
+      return NextResponse.json(
+        { error: 'Invalid mode. Must be one of: dish, fridge, recipe' },
+        { status: 400 }
+      );
+    }
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
       return NextResponse.json(

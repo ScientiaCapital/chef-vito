@@ -19,6 +19,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate imageUrl format
+    let url: URL;
+    try {
+      url = new URL(imageUrl);
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid imageUrl format' },
+        { status: 400 }
+      );
+    }
+
+    // Whitelist check - must be from Supabase
+    if (!url.hostname.endsWith('supabase.co')) {
+      return NextResponse.json(
+        { error: 'imageUrl must be from supabase.co domain' },
+        { status: 400 }
+      );
+    }
+
     // Stage 1: Vision Analysis
     console.log(`[Stage 1] Vision analysis with ${MODELS.vision}`);
     const visionResponse = await openrouter.chat.completions.create({
@@ -97,16 +116,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Analysis error:', error);
-
-    // Attempt fallback with lighter model
-    if (error.message?.includes('JSON') || error.message?.includes('parse')) {
-      try {
-        console.log('[Fallback] Retrying with simpler model');
-        // Implement fallback logic here if needed
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
-      }
-    }
 
     return NextResponse.json(
       {
