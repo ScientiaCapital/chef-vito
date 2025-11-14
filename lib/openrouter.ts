@@ -17,7 +17,7 @@ export const openrouter = new OpenAI({
 });
 
 export const MODELS = {
-  vision: 'qwen/qwen-2.5-vl-72b',
-  structure: 'moonshot/kimi-vl-a3b-thinking',
-  fallback: 'qwen/qwen-2.5-vl-3b'
+  vision: 'qwen/qwen2.5-vl-72b-instruct',
+  structure: 'moonshotai/kimi-vl-a3b-thinking:free',
+  fallback: 'qwen/qwen2.5-vl-7b-instruct'
 } as const;
