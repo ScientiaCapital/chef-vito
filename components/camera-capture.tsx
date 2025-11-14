@@ -83,29 +83,44 @@ export function CameraCapture() {
       return;
     }
 
-    if (file.size > 50 * 1024 * 1024) {
-      setError('Image file is too large. Please use an image under 50MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image file is too large. Please use an image under 10MB.');
       return;
     }
 
     try {
       setIsProcessing(true);
-      console.log('Starting compression...');
-      const { base64 } = await compressImage(file);
-      console.log('Compression complete, adding to photos array');
-      setPhotos(prev => {
-        const newPhotos = [...prev, base64];
-        console.log('Photos array now has', newPhotos.length, 'photos');
-        return newPhotos;
-      });
+      console.log('Reading file as data URL...');
+
+      // Simple approach: just read the file directly as data URL
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        console.log('File read complete, base64 length:', base64?.length);
+
+        setPhotos(prev => {
+          const newPhotos = [...prev, base64];
+          console.log('Photos array now has', newPhotos.length, 'photos');
+          return newPhotos;
+        });
+
+        setError(null);
+        setIsProcessing(false);
+      };
+
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error);
+        setError('Failed to read image file.');
+        setIsProcessing(false);
+      };
+
+      reader.readAsDataURL(file);
 
       // Reset input so same file can be selected again
       e.target.value = '';
-      setError(null);
     } catch (err) {
-      console.error('Image compression error:', err);
+      console.error('Image processing error:', err);
       setError('Failed to process image. Please try another photo.');
-    } finally {
       setIsProcessing(false);
     }
   };
