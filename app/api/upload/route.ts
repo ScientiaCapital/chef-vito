@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import * as Sentry from '@sentry/nextjs';
 
 export async function POST(req: NextRequest) {
   try {
@@ -57,6 +58,10 @@ export async function POST(req: NextRequest) {
         name: error.name,
         error: error
       });
+      Sentry.captureException(error, {
+        tags: { route: 'upload', mode },
+        extra: { fileName: filename, fileSize: file.size }
+      });
       return NextResponse.json(
         {
           error: 'Failed to upload image',
@@ -74,6 +79,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: publicUrl });
   } catch (error) {
     console.error('Upload error:', error);
+    Sentry.captureException(error, {
+      tags: { route: 'upload' },
+      extra: { context: 'General upload error' }
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

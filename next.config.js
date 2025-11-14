@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs');
+
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
@@ -11,4 +13,19 @@ const nextConfig = {
   turbopack: {}
 };
 
-module.exports = withPWA(nextConfig);
+module.exports = withSentryConfig(
+  withPWA(nextConfig),
+  {
+    silent: true,
+    org: "scientia-capital",
+    project: "chef-vito",
+  },
+  {
+    widenClientFileUpload: true,
+    transpileClientSDK: true,
+    tunnelRoute: "/monitoring",
+    hideSourceMaps: true,
+    disableLogger: true,
+    automaticVercelMonitors: true,
+  }
+);

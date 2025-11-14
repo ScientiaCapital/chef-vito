@@ -4,20 +4,33 @@ import { supabase } from '@/lib/supabase';
 import { getVisionPrompt, getStructurePrompt } from '@/lib/prompts';
 import { DishAnalysisSchema, FridgeAnalysisSchema, RecipeOCRSchema } from '@/lib/schemas';
 import { AnalysisMode } from '@/lib/types';
+import * as Sentry from '@sentry/nextjs';
 
 export async function POST(req: NextRequest) {
+  return Sentry.startSpan(
+    {
+      op: 'http.server',
+      name: 'POST /api/analyze',
+    },
+    async () => {
+  let mode: AnalysisMode | undefined;
+  let imageUrl: string | undefined;
   try {
-    const { imageUrl, mode } = await req.json() as {
+    const body = await req.json() as {
       imageUrl: string;
       mode: AnalysisMode;
     };
 
-    if (!imageUrl || !mode) {
+    if (!body.imageUrl || !body.mode) {
       return NextResponse.json(
         { error: 'Missing imageUrl or mode' },
         { status: 400 }
       );
     }
+
+    // Assign after validation so TypeScript knows they're defined
+    imageUrl = body.imageUrl;
+    mode = body.mode;
 
     // Validate imageUrl format
     let url: URL;
@@ -40,24 +53,36 @@ export async function POST(req: NextRequest) {
 
     // Stage 1: Vision Analysis
     console.log(`[Stage 1] Vision analysis with ${MODELS.vision}`);
-    const visionResponse = await openrouter.chat.completions.create({
-      model: MODELS.vision,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text', text: getVisionPrompt(mode) },
-          { type: 'image_url', image_url: { url: imageUrl } }
-        ]
-      }],
-      temperature: 0.3
-    });
+    const visionOutput = await Sentry.startSpan(
+      {
+        op: 'ai.vision',
+        name: 'Vision Analysis',
+      },
+      async (span) => {
+        span?.setAttribute('mode', mode!);
+        span?.setAttribute('model', MODELS.vision);
 
-    const visionOutput = visionResponse.choices[0]?.message?.content;
-    if (!visionOutput) {
-      throw new Error('No vision output received');
-    }
+        const visionResponse = await openrouter.chat.completions.create({
+          model: MODELS.vision,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: getVisionPrompt(mode!) },
+              { type: 'image_url', image_url: { url: imageUrl! } }
+            ]
+          }],
+          temperature: 0.3
+        });
 
-    console.log('[Stage 1] Vision output:', visionOutput.substring(0, 200));
+        const output = visionResponse.choices[0]?.message?.content;
+        if (!output) {
+          throw new Error('No vision output received');
+        }
+
+        console.log('[Stage 1] Vision output:', output.substring(0, 200));
+        return output;
+      }
+    );
 
     // Get appropriate schema
     const schema = mode === 'dish'
@@ -68,21 +93,33 @@ export async function POST(req: NextRequest) {
 
     // Stage 2: Structured Extraction
     console.log(`[Stage 2] Structure extraction with ${MODELS.structure}`);
-    const structureResponse = await openrouter.chat.completions.create({
-      model: MODELS.structure,
-      messages: [{
-        role: 'user',
-        content: getStructurePrompt(mode, visionOutput, schema._def)
-      }],
-      temperature: 0
-    });
+    let structuredOutput = await Sentry.startSpan(
+      {
+        op: 'ai.structure',
+        name: 'Structure Extraction',
+      },
+      async (span) => {
+        span?.setAttribute('mode', mode!);
+        span?.setAttribute('model', MODELS.structure);
 
-    let structuredOutput = structureResponse.choices[0]?.message?.content;
-    if (!structuredOutput) {
-      throw new Error('No structured output received');
-    }
+        const structureResponse = await openrouter.chat.completions.create({
+          model: MODELS.structure,
+          messages: [{
+            role: 'user',
+            content: getStructurePrompt(mode!, visionOutput, schema._def)
+          }],
+          temperature: 0
+        });
 
-    console.log('[Stage 2] Raw output:', structuredOutput.substring(0, 200));
+        const output = structureResponse.choices[0]?.message?.content;
+        if (!output) {
+          throw new Error('No structured output received');
+        }
+
+        console.log('[Stage 2] Raw output:', output.substring(0, 200));
+        return output;
+      }
+    );
 
     // Clean markdown code blocks if present
     structuredOutput = structuredOutput
@@ -99,8 +136,8 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from('analyses')
       .insert({
-        image_url: imageUrl,
-        mode,
+        image_url: imageUrl!,
+        mode: mode!,
         analysis: validated,
         model_used: MODELS.vision
       })
@@ -109,6 +146,10 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('Supabase error:', error);
+      Sentry.captureException(error, {
+        tags: { route: 'analyze', stage: 'database-insert', mode: mode! },
+        extra: { imageUrl: imageUrl! }
+      });
       // Don't fail the request if DB insert fails
     }
 
@@ -116,6 +157,10 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Analysis error:', error);
+    Sentry.captureException(error, {
+      tags: { route: 'analyze', ...(mode && { mode }) },
+      extra: { ...(imageUrl && { imageUrl }), errorMessage: error.message }
+    });
 
     return NextResponse.json(
       {
@@ -125,4 +170,6 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+  }
+  );
 }
