@@ -15,10 +15,12 @@ export async function POST(req: NextRequest) {
     async () => {
   let mode: AnalysisMode | undefined;
   let imageUrl: string | undefined;
+  let allImages: string[] = [];
   try {
     const body = await req.json() as {
       imageUrl: string;
       mode: AnalysisMode;
+      allImages?: string[];
     };
 
     if (!body.imageUrl || !body.mode) {
@@ -31,6 +33,7 @@ export async function POST(req: NextRequest) {
     // Assign after validation so TypeScript knows they're defined
     imageUrl = body.imageUrl;
     mode = body.mode;
+    allImages = body.allImages || [body.imageUrl];
 
     // Validate imageUrl format
     let url: URL;
@@ -53,6 +56,7 @@ export async function POST(req: NextRequest) {
 
     // Stage 1: Vision Analysis
     console.log(`[Stage 1] Vision analysis with ${MODELS.vision}`);
+    console.log(`Analyzing ${allImages.length} image(s) for ${mode} mode`);
     const visionOutput = await Sentry.startSpan(
       {
         op: 'ai.vision',
@@ -61,15 +65,30 @@ export async function POST(req: NextRequest) {
       async (span) => {
         span?.setAttribute('mode', mode!);
         span?.setAttribute('model', MODELS.vision);
+        span?.setAttribute('imageCount', allImages.length);
+
+        // For fridge mode, send ALL images
+        // For other modes, just send the first image
+        const imagesToAnalyze = mode === 'fridge' ? allImages : [imageUrl!];
+
+        const content: Array<{type: 'text', text: string} | {type: 'image_url', image_url: {url: string}}> = [
+          { type: 'text', text: getVisionPrompt(mode!) }
+        ];
+
+        // Add all images to the content array
+        imagesToAnalyze.forEach((url, index) => {
+          content.push({
+            type: 'image_url',
+            image_url: { url }
+          });
+          console.log(`Added image ${index + 1}/${imagesToAnalyze.length} to vision request`);
+        });
 
         const visionResponse = await openrouter.chat.completions.create({
           model: MODELS.vision,
           messages: [{
             role: 'user',
-            content: [
-              { type: 'text', text: getVisionPrompt(mode!) },
-              { type: 'image_url', image_url: { url: imageUrl! } }
-            ]
+            content
           }],
           temperature: 0.3
         });

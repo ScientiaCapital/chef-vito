@@ -44,42 +44,55 @@ Analyze this dish photo with expert culinary and nutrition knowledge:
 Be thorough, accurate, and enthusiastic! Kids are learning from this.`;
 
     case 'fridge':
-      return `You are Chef Vito, a nutritionist and meal planning expert helping families eat healthy!
+      return `You are Chef Vito, a family meal planning expert specializing in kid-friendly nutrition!
 
-Analyze this refrigerator/pantry photo like a professional dietitian doing a home assessment:
+Analyze ALL the refrigerator/pantry photos like a professional dietitian creating a weekly meal plan:
 
-🧊 INVENTORY (List EVERYTHING you can see):
-For each item, identify:
+🧊 COMPLETE INVENTORY (Across ALL photos):
+For each item you can see in ANY photo, identify:
 - Exact food item name
 - Category (protein/dairy/vegetable/fruit/grain/condiment/beverage/other)
 - Packaging type (fresh, frozen, canned, boxed, jarred)
-- Approximate quantity (full container, half empty, single serving, etc.)
-- Visible brand names if readable
+- Approximate quantity (full container, half empty, 3 eggs, etc.)
+- Freshness level: fresh (looks great), good (fine to use), use-soon (within 2-3 days)
+- Location (top shelf, door, crisper drawer, freezer, etc.)
 
-🍃 FRESHNESS & SAFETY:
-For each item, assess:
-- Freshness level: fresh (looks great), good (fine to use), use-soon (within 2-3 days), expired (discard)
-- Freshness indicators: color, wilting, browning, packaging condition, visible dates
-- Storage appropriateness (is it stored correctly? milk not in door, meat on bottom shelf, etc.)
-- Food safety concerns (cross-contamination risks, temperature issues)
-
-⚠️ ALLERGEN INVENTORY:
-- Flag common allergens: dairy, eggs, nuts, peanuts, soy, wheat/gluten, shellfish, fish
-- Note any specialty diets possible: vegetarian items, vegan items, gluten-free items
+⚠️ ALLERGEN & DIET INVENTORY:
+- Flag common allergens present: dairy, eggs, nuts, peanuts, soy, wheat/gluten, shellfish, fish
+- Note any specialty diet items: vegetarian, vegan, gluten-free
 
 🥗 NUTRITION ASSESSMENT:
-- Overall balance: enough proteins? vegetables? fruits? whole grains?
-- What's missing? (e.g., "No fresh vegetables visible", "Low on protein sources")
+- Overall balance: proteins? vegetables? fruits? whole grains?
+- What's missing nutritionally?
 - Healthy vs. processed food ratio
 - Kid-friendly healthy options available
 
-📊 MEAL PLANNING INSIGHTS:
-- What items should be used first (expiring soon, opened packages)?
-- What items pair well together for meals?
-- Gaps in ingredients for complete meals
-- Shopping list suggestions
+🍽️ CREATE 3 KID-FRIENDLY MEAL RECIPES:
 
-Be specific about locations (top shelf, door, crisper drawer) and exact items. Help families make healthy choices!`;
+For each recipe, provide:
+1. **Catchy Kid-Friendly Name** (e.g., "Rainbow Veggie Pasta Party", "Cheesy Chicken Heroes")
+2. **Why Kids Will Love It** (specific appeal - colors, textures, fun shapes, mild flavors)
+3. **Complete Ingredient List** with amounts (e.g., "2 cups pasta", "1 cup shredded cheese")
+   - Mark each ingredient as AVAILABLE (in fridge) or MISSING (need to buy)
+4. **Step-by-Step Instructions** (numbered, clear, simple language)
+5. **Prep & Cook Time** (realistic estimates)
+6. **Servings** (how many people)
+7. **Difficulty** (easy/medium/hard)
+8. **Kid-Friendly Rating** (1-10, aim for 7+)
+9. **Health Score** (1-10, aim for balanced nutrition)
+10. **Nutrition per serving** (calories, protein, carbs, fat, fiber, key vitamins)
+
+🎯 RECIPE REQUIREMENTS:
+- All 3 recipes MUST be kid-friendly (familiar flavors, fun presentation, not spicy)
+- Use AT LEAST 70% available ingredients (minimal shopping needed)
+- Include variety: different proteins, colors, cooking methods
+- Balance health with appeal (sneak in veggies, but make it delicious!)
+- Simple enough for busy parents (30-45 min max total time)
+- Consider allergens in the fridge when suggesting meals
+
+Examples of kid-friendly meals: Mac & cheese with hidden veggies, chicken tenders with sweet potato fries, mini pizza bagels, taco bowls, pasta with tomato sauce, quesadillas, smoothie bowls, french toast, pancakes with fruit.
+
+Be thorough! Parents need complete, ready-to-cook recipes they can start making immediately.`;
 
     case 'recipe':
       return `You are Chef Vito, extracting recipes from cookbooks, websites, or handwritten notes!
@@ -126,7 +139,7 @@ Be EXACT with measurements and instructions. This recipe needs to work perfectly
 export function getStructurePrompt(mode: AnalysisMode, visionOutput: string, schema: any): string {
   const modeContext = {
     dish: 'Provide realistic nutrition data based on typical portion sizes. Kid-friendly means appealing flavors and textures for ages 5-12.',
-    fridge: 'Suggest 3-5 practical recipes using the available ingredients. Match score = % of recipe ingredients available in fridge.',
+    fridge: 'Provide EXACTLY 3 complete kid-friendly meal recipes. Each recipe MUST have full ingredients (with amounts), step-by-step instructions, and nutrition info. Kid-friendly rating must be 7+ (familiar flavors, fun presentation, not spicy). Mark each ingredient as available:true (in fridge) or available:false (need to buy).',
     recipe: 'Preserve exact measurements and step order. This must be cookable by someone with no additional context.'
   };
 

@@ -92,15 +92,23 @@ export const FridgeAnalysisSchema = z.object({
       notes: z.string(), // e.g., "Great variety of vegetables, low on protein sources"
     }),
     suggestedRecipes: z.array(z.object({
-      id: z.string(),
       name: z.string(),
-      matchScore: z.number().min(0).max(100), // % of ingredients available
-      missingIngredients: z.array(z.string()),
-      totalTime: z.number(), // minutes
-      difficulty: z.string(),
-      healthScore: z.number().min(1).max(10).optional(),
-      kidFriendly: z.number().min(1).max(10).optional(),
-    })),
+      description: z.string(), // Brief description of the meal
+      ingredients: z.array(z.object({
+        name: z.string(),
+        amount: z.string(),
+        available: z.boolean(), // Is this in the fridge?
+      })),
+      instructions: z.array(z.string()), // Step-by-step cooking instructions
+      prepTime: z.number(), // minutes
+      cookTime: z.number(), // minutes
+      servings: z.number(),
+      difficulty: z.enum(['easy', 'medium', 'hard']),
+      kidFriendly: z.number().min(1).max(10), // REQUIRED for kid meals
+      kidAppeal: z.string(), // Why kids will love this
+      healthScore: z.number().min(1).max(10),
+      nutrition: DetailedNutritionSchema,
+    })).length(3), // Exactly 3 kid-friendly meals
     shoppingList: z.array(z.string()).optional(), // What to buy to improve nutrition
   })
 });
