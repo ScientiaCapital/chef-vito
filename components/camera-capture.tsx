@@ -17,6 +17,7 @@ const MODE_LABELS: Record<AnalysisMode, string> = {
 export function CameraCapture() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { mode, setMode, setIsAnalyzing, setError } = useAppStore();
 
   const compressImage = async (file: File): Promise<{ blob: Blob; base64: string }> => {
@@ -70,7 +71,12 @@ export function CameraCapture() {
 
   const handlePhotoAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
+
+    console.log('File selected:', file.name, file.type, file.size);
 
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file (JPG, PNG, etc.)');
@@ -83,15 +89,24 @@ export function CameraCapture() {
     }
 
     try {
+      setIsProcessing(true);
+      console.log('Starting compression...');
       const { base64 } = await compressImage(file);
-      setPhotos(prev => [...prev, base64]);
+      console.log('Compression complete, adding to photos array');
+      setPhotos(prev => {
+        const newPhotos = [...prev, base64];
+        console.log('Photos array now has', newPhotos.length, 'photos');
+        return newPhotos;
+      });
 
       // Reset input so same file can be selected again
       e.target.value = '';
       setError(null);
     } catch (err) {
-      setError('Failed to process image. Please try another photo.');
       console.error('Image compression error:', err);
+      setError('Failed to process image. Please try another photo.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -105,6 +120,9 @@ export function CameraCapture() {
   };
 
   const handleAnalyze = useCallback(async () => {
+    console.log('=== ANALYZE STARTED ===');
+    console.log('Photos to analyze:', photos.length);
+
     if (photos.length === 0) {
       setError('Please add at least one photo');
       return;
@@ -117,9 +135,13 @@ export function CameraCapture() {
       // Upload all photos and collect URLs
       const uploadedUrls: string[] = [];
 
-      for (const photo of photos) {
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        console.log(`Uploading photo ${i + 1}/${photos.length}...`);
+
         // Convert base64 to blob (already compressed from handlePhotoAdd)
         const blob = await fetch(photo).then(r => r.blob());
+        console.log('Blob created, size:', blob.size);
 
         // Upload image
         const formData = new FormData();
@@ -131,16 +153,23 @@ export function CameraCapture() {
           body: formData
         });
 
+        console.log('Upload response status:', uploadRes.status);
+
         if (!uploadRes.ok) {
-          throw new Error('Upload failed');
+          const errorData = await uploadRes.json();
+          console.error('Upload failed:', errorData);
+          throw new Error(errorData.error || 'Upload failed');
         }
 
         const { url } = await uploadRes.json();
+        console.log('Photo uploaded:', url);
         uploadedUrls.push(url);
       }
 
       // For now, analyze the first image
       // TODO: Update API to handle multiple images
+      console.log('Starting AI analysis with:', uploadedUrls[0]);
+
       const analyzeRes = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -152,16 +181,22 @@ export function CameraCapture() {
         })
       });
 
+      console.log('Analysis response status:', analyzeRes.status);
+
       if (!analyzeRes.ok) {
         const errorData = await analyzeRes.json();
+        console.error('Analysis failed:', errorData);
         throw new Error(errorData.error || 'Analysis failed');
       }
 
       const result = await analyzeRes.json();
+      console.log('Analysis complete! Result:', result);
       useAppStore.getState().setAnalysisResult(result);
       setPhotos([]); // Clear photos after successful analysis
+      console.log('=== ANALYZE COMPLETE ===');
     } catch (error: any) {
-      console.error('Analysis error:', error);
+      console.error('=== ANALYZE ERROR ===');
+      console.error('Full error:', error);
       const errorMessage = error.message?.includes('network')
         ? 'Network error. Please check your connection and try again.'
         : error.message?.includes('timeout')
@@ -197,11 +232,21 @@ export function CameraCapture() {
         <div className="flex flex-col gap-3">
           <Button
             onClick={() => cameraInputRef.current?.click()}
-            className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200"
+            disabled={isProcessing}
+            className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             size="lg"
           >
-            <Camera className="mr-2 h-5 w-5" />
-            {mode === 'fridge' && photos.length > 0 ? 'Add Another Photo' : 'Take Photo'}
+            {isProcessing ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Processing...
+              </>
+            ) : (
+              <>
+                <Camera className="mr-2 h-5 w-5" />
+                {mode === 'fridge' && photos.length > 0 ? 'Add Another Photo' : 'Take Photo'}
+              </>
+            )}
           </Button>
 
           {/* Hidden native camera input */}
