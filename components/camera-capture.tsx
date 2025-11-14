@@ -118,14 +118,12 @@ export function CameraCapture() {
       const uploadedUrls: string[] = [];
 
       for (const photo of photos) {
-        // Convert base64 to blob
-        const compressedBlob = await compressImage(
-          await fetch(photo).then(r => r.blob()) as any
-        ).then(result => result.blob);
+        // Convert base64 to blob (already compressed from handlePhotoAdd)
+        const blob = await fetch(photo).then(r => r.blob());
 
         // Upload image
         const formData = new FormData();
-        formData.append('image', compressedBlob, 'capture.jpg');
+        formData.append('image', blob, 'capture.jpg');
         formData.append('mode', mode);
 
         const uploadRes = await fetch('/api/upload', {
